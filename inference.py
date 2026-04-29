@@ -43,10 +43,17 @@ def main(cfg):
     
     depth_list = []
     for path in depth_paths:
-        depth_img = np.array(Image.open(path).convert('L') )
-        depth_image_normalized = (depth_img - depth_img.min()) / (depth_img.max() - depth_img.min())
-        depth_tensor = torch.from_numpy(depth_image_normalized)
+        depth_img = np.array(Image.open(path))  # keep native dtype
+        depth_tensor = torch.from_numpy(depth_img.astype(np.float32))
+
+        if depth_img.dtype == np.uint16:
+            depth_tensor = depth_tensor / 65535.0
+        elif depth_img.dtype == np.uint8:
+            depth_tensor = depth_tensor / 255.0  # fallback for 8-bit
+        # else: assume already float in [0,1]
+
         depth_list.append(depth_tensor)
+
     depths = torch.stack(depth_list, dim=0).permute(1,2,0).unsqueeze(0).unsqueeze(0)
     
     _,_,H,W,_ = depths.shape
